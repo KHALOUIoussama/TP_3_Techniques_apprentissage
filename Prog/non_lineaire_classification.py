@@ -5,7 +5,8 @@ Execution dans un terminal
 Exemple:
    python non_lineaire_classification.py rbf 100 200 0 0
 
-Vos Noms (Vos Matricules) .~= À MODIFIER =~.
+Timothée Blanchy (timb1101)
+
 """
 
 import numpy as np
@@ -19,7 +20,11 @@ def analyse_erreur(err_train, err_test):
     Fonction qui affiche un WARNING lorsqu'il y a apparence de sur ou de sous
     apprentissage
     """
-    #AJOUTER CODE ICI
+    bruit = 5
+    if err_test > bruit and err_train < bruit:
+        print("\nWARNING: sur-apprentissage possible\n")
+    if err_test > bruit and err_train > bruit:
+        print("\nWARNING: sous-apprentissage possible\n")
 
 def main():
 

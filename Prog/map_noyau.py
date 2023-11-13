@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 #####
-# Vos Noms (Vos Matricules) .~= À MODIFIER =~.
+# Timothée Blanchy (timb1101)
+# 
 ###
 
 import numpy as np
@@ -50,7 +51,16 @@ class MAPnoyau:
         l'equation 6.8 du livre de Bishop et garder en mémoire les données
         d'apprentissage dans ``self.x_train``
         """
-        #AJOUTER CODE ICI
+        self.x_train = x_train
+        N = len(x_train)
+        K = np.zeros((N, N))
+        for i in range(N):
+            for j in range(N):
+                K[i, j] = self.noyau_fonction(x_train[i], x_train[j])
+
+        self.a = np.dot(np.linalg.inv(self.lamb * np.identity(N) + K), t_train)
+
+
         
     def prediction(self, x):
         """
@@ -65,17 +75,36 @@ class MAPnoyau:
         classification binaire, la prediction est +1 lorsque y(x)>0.5 et 0
         sinon
         """
-        #AJOUTER CODE ICI
-        return 0
+        y_x =  np.sum(np.dot(np.transpose(self.a), self.noyau_fonction(x, self.x_train)))
+
+        return 1 if y_x > 0.5 else 0
+    
+
+    def noyau_fonction(self, x, x_train):
+        """
+        Retourne la valeur du noyau désiré (rbf, lineaire, polynomial ou sigmoidal) pour
+        une entrée ``x`` et un tableau 2D Numpy d'entrées d'entraînement
+        ``x_train``.  Cette fonction est appelée par la fonction ``prediction()``
+        """
+        if self.noyau == 'rbf':
+            return np.exp(-np.sum((x - x_train) ** 2, axis=1) / (2 * self.sigma_square))
+        elif self.noyau == 'lineaire':
+            return np.sum(x * x_train, axis=1) + self.sigma_square
+        elif self.noyau == 'polynomial':
+            return (np.sum(x * x_train, axis=1) + self.sigma_square) ** self.M
+        elif self.noyau == 'sigmoidal':
+            return np.tanh(self.sigma_square * np.sum(x * x_train, axis=1) + self.c)
+        else:
+            raise ValueError('Noyau invalide')
+
 
     def erreur(self, t, prediction):
         """
         Retourne la différence au carré entre
         la cible ``t`` et la prédiction ``prediction``.
         """
-        # AJOUTER CODE ICI
-        return 0.
-
+        return (t - prediction) ** 2
+    
     def validation_croisee(self, x_tab, t_tab):
         """
         Cette fonction trouve les meilleurs hyperparametres ``self.sigma_square``,
@@ -88,7 +117,74 @@ class MAPnoyau:
         de 0.000000001 à 2, les valeurs de ``self.c`` de 0 à 5, les valeurs
         de ''self.b'' et ''self.d'' de 0.00001 à 0.01 et ``self.M`` de 2 à 6
         """
-        # AJOUTER CODE ICI
+        # Validation croisée (k=10)
+        k = 10
+        N = len(x_tab)
+        best_erreur = np.inf
+        if N < k:
+            raise ValueError('Nombre de données trop petit')
+        
+        indices = np.random.permutation(N)
+
+        # Division des données en k parties
+        indices = np.array_split(indices, k)
+
+        # Recherche des meilleurs paramètres
+        for sigma_square in np.linspace(0.000000001, 2, 10):
+            for lamb in np.linspace(0.000000001, 2, 10):
+                for c in np.linspace(0, 5, 10):
+                    for b in np.linspace(0.00001, 0.01, 10):
+                        for d in np.linspace(0.00001, 0.01, 10):
+                            for M in range(2, 7):
+                                for i in range(k):
+                                    # Création des données d'entrainement et de validation
+                                    x_train = np.delete(x_tab, indices[i], axis=0)
+                                    t_train = np.delete(t_tab, indices[i], axis=0)
+                                    x_val = x_tab[indices[i]]
+                                    t_val = t_tab[indices[i]]
+
+                                    # Entrainement
+                                    self.sigma_square = sigma_square
+                                    self.lamb = lamb
+                                    self.c = c
+                                    self.b = b
+                                    self.d = d
+                                    self.M = M
+                                    self.entrainement(x_train, t_train)
+
+                                    # Calcul de l'erreur
+                                    erreur = 0
+                                    for j in range(len(x_val)):
+                                        erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
+                                    erreur /= N
+
+                                    # Mise à jour des meilleurs paramètres
+                                    if erreur < best_erreur:
+                                        best_erreur = erreur
+                                        best_sigma_square = sigma_square
+                                        best_lamb = lamb
+                                        best_c = c
+                                        best_b = b
+                                        best_d = d
+                                        best_M = M
+
+        # Affichage des meilleurs paramètres
+        print('Meilleurs paramètres:')
+        print(f"sigma_square: {best_sigma_square}")
+        print(f"lamb: {best_lamb}")
+        print(f"c: {best_c}")
+        print(f"b: {best_b}")
+        print(f"d: {best_d}")
+        print(f"M: {best_M}")
+
+        # Mise à jour des paramètres
+        self.sigma_square = best_sigma_square
+        self.lamb = best_lamb
+        self.c = best_c
+        self.b = best_b
+        self.d = best_d
+
+
 
     def affichage(self, x_tab, t_tab):
 
