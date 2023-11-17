@@ -1,11 +1,14 @@
 # -*- coding: utf-8 -*-
+#####
+# Timothée Blanchy (timb1101)
+# Khaloui Oussama (khao1201)
+###
+
 """
 Execution dans un terminal
 
 Exemple:
    python non_lineaire_classification.py rbf 100 200 0 0
-
-Timothée Blanchy (timb1101)
 
 """
 
