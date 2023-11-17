@@ -210,10 +210,12 @@ class MAPnoyau:
 
         # Division des données en k parties
         indices = np.array_split(indices, k)
+        nb_tests = 10
 
         if self.noyau == 'rbf':   # Paramètres à tester : sigma_square, lamb
-            for sigma_square in np.linspace(0.000000001, 2, 10):
-                for lamb in np.linspace(0.000000001, 2, 10):
+            for sigma_square in np.linspace(0.000000001, 2, nb_tests):
+                for lamb in np.linspace(0.000000001, 2, nb_tests):
+                    erreur = 0
                     for i in range(k):
                         # Création des données d'entrainement et de validation
                         x_train = np.delete(x_tab, indices[i], axis=0)
@@ -227,23 +229,25 @@ class MAPnoyau:
                         self.entrainement(x_train, t_train)
 
                         # Calcul de l'erreur
-                        erreur = 0
                         for j in range(len(x_val)):
                             erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                        erreur /= N
+                    erreur /= N
 
-                        # Mise à jour des meilleurs paramètres
-                        if erreur < best_erreur:
-                            best_erreur = erreur
-                            best_sigma_square = sigma_square
-                            best_lamb = lamb
+                    # Mise à jour des meilleurs paramètres
+                    # print(f"sigma_square: {sigma_square} lamb: {lamb} erreur: {erreur}")
+                    if erreur < best_erreur:
+                        best_erreur = erreur
+                        best_sigma_square = sigma_square
+                        best_lamb = lamb
+                        # print(f'Meilleurs paramètres: sigma_square: {best_sigma_square} lamb: {best_lamb}')
         
             print(f'Meilleurs paramètres:\nsigma_square: {best_sigma_square}\nlamb: {best_lamb}')
             self.sigma_square = best_sigma_square
             self.lamb = best_lamb
 
         elif self.noyau == 'lineaire':   # Paramètres à tester : lamb
-            for lamb in np.linspace(0.000000001, 2, 10):
+            for lamb in np.linspace(0.000000001, 2, nb_tests):
+                erreur = 0
                 for i in range(k):
                     # Création des données d'entrainement et de validation
                     x_train = np.delete(x_tab, indices[i], axis=0)
@@ -256,23 +260,25 @@ class MAPnoyau:
                     self.entrainement(x_train, t_train)
 
                     # Calcul de l'erreur
-                    erreur = 0
                     for j in range(len(x_val)):
                         erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                    erreur /= N
+                erreur /= N
 
-                    # Mise à jour des meilleurs paramètres
-                    if erreur < best_erreur:
-                        best_erreur = erreur
-                        best_lamb = lamb
+                # Mise à jour des meilleurs paramètres
+                # print(f"lamb: {lamb} erreur: {erreur}")
+                if erreur < best_erreur:
+                    best_erreur = erreur
+                    best_lamb = lamb
+                    # print(f'Meilleurs paramètres: lamb: {best_lamb} best_erreur: {best_erreur}')
 
             print(f'Meilleurs paramètres:\nlamb: {best_lamb}')
             self.lamb = best_lamb
 
         elif self.noyau == 'polynomial':   # Paramètres à tester : lamb, c, M
-            for lamb in np.linspace(0.000000001, 2, 10):
+            for lamb in np.linspace(0.000000001, 2, nb_tests):
                 for c in np.linspace(0, 5, 10):
                     for M in range(2, 7):
+                        erreur = 0
                         for i in range(k):
                             # Création des données d'entrainement et de validation
                             x_train = np.delete(x_tab, indices[i], axis=0)
@@ -287,17 +293,18 @@ class MAPnoyau:
                             self.entrainement(x_train, t_train)
 
                             # Calcul de l'erreur
-                            erreur = 0
                             for j in range(len(x_val)):
                                 erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                            erreur /= N
+                        erreur /= N
 
-                            # Mise à jour des meilleurs paramètres
-                            if erreur < best_erreur:
-                                best_erreur = erreur
-                                best_lamb = lamb
-                                best_c = c
-                                best_M = M
+                        # Mise à jour des meilleurs paramètres
+                        # print(f"lamb: {lamb} c: {c} M: {M} erreur: {erreur}")
+                        if erreur < best_erreur:
+                            best_erreur = erreur
+                            best_lamb = lamb
+                            best_c = c
+                            best_M = M
+                            # print(f'Meilleurs paramètres: lamb: {best_lamb} c: {best_c} M: {best_M} erreur: {best_erreur}')
             
             print(f'Meilleurs paramètres:\nlamb: {best_lamb}\nc: {best_c}\nM: {best_M}')
             self.lamb = best_lamb
@@ -305,9 +312,10 @@ class MAPnoyau:
             self.M = best_M
 
         elif self.noyau == 'sigmoidal':   # Paramètres à tester : lamb, b, d
-            for lamb in np.linspace(0.000000001, 2, 10):
-                for b in np.linspace(0.00001, 0.01, 10):
-                    for d in np.linspace(0.00001, 0.01, 10):
+            for lamb in np.linspace(0.000000001, 2, nb_tests):
+                for b in np.linspace(0.00001, 0.01, nb_tests):
+                    for d in np.linspace(0.00001, 0.01, nb_tests):
+                        erreur = 0
                         for i in range(k):
                             # Création des données d'entrainement et de validation
                             x_train = np.delete(x_tab, indices[i], axis=0)
@@ -322,17 +330,18 @@ class MAPnoyau:
                             self.entrainement(x_train, t_train)
 
                             # Calcul de l'erreur
-                            erreur = 0
                             for j in range(len(x_val)):
                                 erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                            erreur /= N
+                        erreur /= N
 
-                            # Mise à jour des meilleurs paramètres
-                            if erreur < best_erreur:
-                                best_erreur = erreur
-                                best_lamb = lamb
-                                best_b = b
-                                best_d = d
+                        # Mise à jour des meilleurs paramètres
+                        # print(f"lamb: {lamb} b: {b} d: {d} erreur: {erreur}")
+                        if erreur < best_erreur:
+                            best_erreur = erreur
+                            best_lamb = lamb
+                            best_b = b
+                            best_d = d
+                            # print(f'Meilleurs paramètres: lamb: {best_lamb} b: {best_b} d: {best_d} erreur: {best_erreur}')
             
             print(f'Meilleurs paramètres:\nlamb: {best_lamb}\nb: {best_b}\nd: {best_d}')
             self.lamb = best_lamb
