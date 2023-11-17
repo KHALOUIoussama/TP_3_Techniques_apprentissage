@@ -20,7 +20,7 @@ def analyse_erreur(err_train, err_test):
     Fonction qui affiche un WARNING lorsqu'il y a apparence de sur ou de sous
     apprentissage
     """
-    bruit = 5
+    bruit = 10
     if err_test > bruit and err_train < bruit:
         print("\nWARNING: sur-apprentissage possible\n")
     if err_test > bruit and err_train > bruit:
