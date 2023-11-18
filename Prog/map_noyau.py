@@ -7,7 +7,8 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+from tqdm import tqdm
+import itertools
 
 class MAPnoyau:
     def __init__(self, lamb=0.2, sigma_square=1.06, b=1.0, c=0.1, d=1.0, M=2, noyau='rbf'):
@@ -52,7 +53,7 @@ class MAPnoyau:
         d'apprentissage dans ``self.x_train``
         """
         self.x_train = x_train
-        N = len(x_train)
+        N = x_train.shape[0]
 
         if self.noyau == 'rbf':
             sq_norm = (x_train ** 2).sum(axis=1)
@@ -106,84 +107,7 @@ class MAPnoyau:
         Retourne la différence au carré entre
         la cible ``t`` et la prédiction ``prediction``.
         """
-        return (t - prediction) ** 2
-    
-    # def validation_croisee(self, x_tab, t_tab):
-    #     """
-    #     Cette fonction trouve les meilleurs hyperparametres ``self.sigma_square``,
-    #     ``self.c`` et ``self.M`` (tout dépendant du noyau selectionné) et
-    #     ``self.lamb`` avec une validation croisée de type "k-fold" où k=10 avec les
-    #     données contenues dans x_tab et t_tab.  Une fois les meilleurs hyperparamètres
-    #     trouvés, le modèle est entraîné une dernière fois.
-
-    #     SUGGESTION: Les valeurs de ``self.sigma_square`` et ``self.lamb`` à explorer vont
-    #     de 0.000000001 à 2, les valeurs de ``self.c`` de 0 à 5, les valeurs
-    #     de ''self.b'' et ''self.d'' de 0.00001 à 0.01 et ``self.M`` de 2 à 6
-    #     """
-    #     # Validation croisée (k=10)
-    #     k = 10
-    #     N = len(x_tab)
-    #     best_erreur = np.inf
-    #     if N < k:
-    #         raise ValueError('Nombre de données trop petit')
-        
-    #     indices = np.random.permutation(N)
-
-    #     # Division des données en k parties
-    #     indices = np.array_split(indices, k)
-
-    #     # Recherche des meilleurs paramètres
-    #     nb_recherche = 1000
-    #     for i in range(nb_recherche):
-    #         self.sigma_square = np.random.uniform(0.000000001, 2)
-    #         self.lamb = np.random.uniform(0.000000001, 2)
-    #         self.c = np.random.uniform(0, 5)
-    #         self.b = np.random.uniform(0.00001, 0.01)
-    #         self.d = np.random.uniform(0.00001, 0.01)
-    #         self.M = np.random.randint(2, 7)
-
-    #         for i in range(k):
-    #             # Création des données d'entrainement et de validation
-    #             x_train = np.delete(x_tab, indices[i], axis=0)
-    #             t_train = np.delete(t_tab, indices[i], axis=0)
-    #             x_val = x_tab[indices[i]]
-    #             t_val = t_tab[indices[i]]
-
-    #             # Entrainement
-    #             self.entrainement(x_train, t_train)
-
-    #             # Calcul de l'erreur
-    #             erreur = 0
-    #             for j in range(len(x_val)):
-    #                 erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-    #             erreur /= N
-
-    #             # Mise à jour des meilleurs paramètres
-    #             if erreur < best_erreur:
-    #                 best_erreur = erreur
-    #                 best_sigma_square = self.sigma_square
-    #                 best_lamb = self.lamb
-    #                 best_c = self.c
-    #                 best_b = self.b
-    #                 best_d = self.d
-    #                 best_M = self.M
-
-    #     # Affichage des meilleurs paramètres
-    #     print('Meilleurs paramètres:')
-    #     print(f"sigma_square: {best_sigma_square}")
-    #     print(f"lamb: {best_lamb}")
-    #     print(f"c: {best_c}")
-    #     print(f"b: {best_b}")
-    #     print(f"d: {best_d}")
-    #     print(f"M: {best_M}")
-
-    #     # Mise à jour des paramètres
-    #     self.sigma_square = best_sigma_square
-    #     self.lamb = best_lamb
-    #     self.c = best_c
-    #     self.b = best_b
-    #     self.d = best_d
-    
+        return (t - prediction) ** 2    
 
 
 
@@ -201,155 +125,69 @@ class MAPnoyau:
         """
         # Validation croisée (k=10)
         k = 10
-        N = len(x_tab)
-        best_erreur = np.inf
+        N = x_tab.shape[0]
         if N < k:
             raise ValueError('Nombre de données trop petit')
-        
-        indices = np.random.permutation(N)
 
-        # Division des données en k parties
+        # Créer les plis pour la validation croisée
+        indices = np.arange(N)
+        np.random.shuffle(indices)
         indices = np.array_split(indices, k)
-        nb_tests = 10
 
-        if self.noyau == 'rbf':   # Paramètres à tester : sigma_square, lamb
-            for sigma_square in np.linspace(0.000000001, 2, nb_tests):
-                for lamb in np.linspace(0.000000001, 2, nb_tests):
-                    erreur = 0
-                    for i in range(k):
-                        # Création des données d'entrainement et de validation
-                        x_train = np.delete(x_tab, indices[i], axis=0)
-                        t_train = np.delete(t_tab, indices[i], axis=0)
-                        x_val = x_tab[indices[i]]
-                        t_val = t_tab[indices[i]]
+        # Initialisation des meilleurs paramètres et de l'erreur
+        best_erreur = np.inf
+        best_params = {}
 
-                        # Entrainement
-                        self.sigma_square = sigma_square
-                        self.lamb = lamb
-                        self.entrainement(x_train, t_train)
+        # Définition des grilles de recherche pour chaque hyperparamètre
+        sigma_squares = np.linspace(0.000000001, 2, 20)
+        lambs = np.linspace(0.000000001, 2, 20)
+        cs = np.linspace(0, 5, 20)
+        bs = np.linspace(0.00001, 0.01, 20)
+        ds = np.linspace(0.00001, 0.01, 20)
+        Ms = range(2, 7)
 
-                        # Calcul de l'erreur
-                        for j in range(len(x_val)):
-                            erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                    erreur /= N
-
-                    # Mise à jour des meilleurs paramètres
-                    # print(f"sigma_square: {sigma_square} lamb: {lamb} erreur: {erreur}")
-                    if erreur < best_erreur:
-                        best_erreur = erreur
-                        best_sigma_square = sigma_square
-                        best_lamb = lamb
-                        # print(f'Meilleurs paramètres: sigma_square: {best_sigma_square} lamb: {best_lamb}')
-        
-            print(f'Meilleurs paramètres:\nsigma_square: {best_sigma_square}\nlamb: {best_lamb}')
-            self.sigma_square = best_sigma_square
-            self.lamb = best_lamb
-
-        elif self.noyau == 'lineaire':   # Paramètres à tester : lamb
-            for lamb in np.linspace(0.000000001, 2, nb_tests):
-                erreur = 0
-                for i in range(k):
-                    # Création des données d'entrainement et de validation
-                    x_train = np.delete(x_tab, indices[i], axis=0)
-                    t_train = np.delete(t_tab, indices[i], axis=0)
-                    x_val = x_tab[indices[i]]
-                    t_val = t_tab[indices[i]]
-
-                    # Entrainement
-                    self.lamb = lamb
-                    self.entrainement(x_train, t_train)
-
-                    # Calcul de l'erreur
-                    for j in range(len(x_val)):
-                        erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                erreur /= N
-
-                # Mise à jour des meilleurs paramètres
-                # print(f"lamb: {lamb} erreur: {erreur}")
-                if erreur < best_erreur:
-                    best_erreur = erreur
-                    best_lamb = lamb
-                    # print(f'Meilleurs paramètres: lamb: {best_lamb} best_erreur: {best_erreur}')
-
-            print(f'Meilleurs paramètres:\nlamb: {best_lamb}')
-            self.lamb = best_lamb
-
-        elif self.noyau == 'polynomial':   # Paramètres à tester : lamb, c, M
-            for lamb in np.linspace(0.000000001, 2, nb_tests):
-                for c in np.linspace(0, 5, 10):
-                    for M in range(2, 7):
-                        erreur = 0
-                        for i in range(k):
-                            # Création des données d'entrainement et de validation
-                            x_train = np.delete(x_tab, indices[i], axis=0)
-                            t_train = np.delete(t_tab, indices[i], axis=0)
-                            x_val = x_tab[indices[i]]
-                            t_val = t_tab[indices[i]]
-
-                            # Entrainement
-                            self.lamb = lamb
-                            self.c = c
-                            self.M = M
-                            self.entrainement(x_train, t_train)
-
-                            # Calcul de l'erreur
-                            for j in range(len(x_val)):
-                                erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                        erreur /= N
-
-                        # Mise à jour des meilleurs paramètres
-                        # print(f"lamb: {lamb} c: {c} M: {M} erreur: {erreur}")
-                        if erreur < best_erreur:
-                            best_erreur = erreur
-                            best_lamb = lamb
-                            best_c = c
-                            best_M = M
-                            # print(f'Meilleurs paramètres: lamb: {best_lamb} c: {best_c} M: {best_M} erreur: {best_erreur}')
-            
-            print(f'Meilleurs paramètres:\nlamb: {best_lamb}\nc: {best_c}\nM: {best_M}')
-            self.lamb = best_lamb
-            self.c = best_c
-            self.M = best_M
-
-        elif self.noyau == 'sigmoidal':   # Paramètres à tester : lamb, b, d
-            for lamb in np.linspace(0.000000001, 2, nb_tests):
-                for b in np.linspace(0.00001, 0.01, nb_tests):
-                    for d in np.linspace(0.00001, 0.01, nb_tests):
-                        erreur = 0
-                        for i in range(k):
-                            # Création des données d'entrainement et de validation
-                            x_train = np.delete(x_tab, indices[i], axis=0)
-                            t_train = np.delete(t_tab, indices[i], axis=0)
-                            x_val = x_tab[indices[i]]
-                            t_val = t_tab[indices[i]]
-
-                            # Entrainement
-                            self.lamb = lamb
-                            self.b = b
-                            self.d = d
-                            self.entrainement(x_train, t_train)
-
-                            # Calcul de l'erreur
-                            for j in range(len(x_val)):
-                                erreur += self.erreur(t_val[j], self.prediction(x_val[j]))
-                        erreur /= N
-
-                        # Mise à jour des meilleurs paramètres
-                        # print(f"lamb: {lamb} b: {b} d: {d} erreur: {erreur}")
-                        if erreur < best_erreur:
-                            best_erreur = erreur
-                            best_lamb = lamb
-                            best_b = b
-                            best_d = d
-                            # print(f'Meilleurs paramètres: lamb: {best_lamb} b: {best_b} d: {best_d} erreur: {best_erreur}')
-            
-            print(f'Meilleurs paramètres:\nlamb: {best_lamb}\nb: {best_b}\nd: {best_d}')
-            self.lamb = best_lamb
-            self.b = best_b
-            self.d = best_d
-
+        # Sélection des hyperparamètres en fonction du noyau choisi
+        if self.noyau == 'rbf':
+            parametres_grid = {'sigma_square': sigma_squares, 'lamb': lambs}
+        elif self.noyau == 'lineaire':
+            parametres_grid = {'lamb': lambs}
+        elif self.noyau == 'polynomial':
+            parametres_grid = {'lamb': lambs, 'c': cs, 'M': Ms}
+        elif self.noyau == 'sigmoidal':
+            parametres_grid = {'lamb': lambs, 'b': bs, 'd': ds}
         else:
             raise ValueError('Noyau invalide')
+
+        # Recherche en grille avec validation croisée
+        for params_combination in tqdm(itertools.product(*parametres_grid.values()), desc='Grid Search'):
+            params = dict(zip(parametres_grid.keys(), params_combination))
+            erreur_moyenne = 0
+            
+            for i, val_index in enumerate(indices):
+                train_index = np.hstack([indices[j] for j in range(k) if j != i])
+                x_train, x_val = x_tab[train_index], x_tab[val_index]
+                t_train, t_val = t_tab[train_index], t_tab[val_index]
+                
+                # Mise à jour des paramètres du modèle
+                for param, value in params.items():
+                    setattr(self, param, value)
+                self.entrainement(x_train, t_train)
+                
+                # Calcul de l'erreur sur le pli de validation
+                predictions = np.array([self.prediction(x) for x in x_val])
+                erreur_moyenne += np.mean((predictions - t_val) ** 2)
+            
+            erreur_moyenne /= k
+            if erreur_moyenne < best_erreur:
+                best_erreur = erreur_moyenne
+                best_params = params.copy()
+
+        # Affichage des meilleurs paramètres et mise à jour du modèle
+        print(f'Meilleurs paramètres:\n{best_params}')
+        for param, value in best_params.items():
+            setattr(self, param, value)
+        self.entrainement(x_tab, t_tab)
+
 
 
 

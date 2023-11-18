@@ -18,16 +18,19 @@ from map_noyau import MAPnoyau
 import gestion_donnees as gd
 
 
-def analyse_erreur(err_train, err_test):
+def analyse_erreur(err_train, err_test, seuil_surapprentissage=30, seuil_sousapprentissage=30, seuil_bon_ajustement=5):
     """
     Fonction qui affiche un WARNING lorsqu'il y a apparence de sur ou de sous
     apprentissage
     """
-    bruit = 10
-    if err_test > bruit and err_train < bruit:
-        print("\nWARNING: sur-apprentissage possible\n")
-    if err_test > bruit and err_train > bruit:
-        print("\nWARNING: sous-apprentissage possible\n")
+    if err_test - err_train > seuil_surapprentissage:
+        print('WARNING: Surapprentissage détecté. L\'erreur de test est considérablement plus élevée que l\'erreur d\'entraînement.')
+    elif err_train > seuil_sousapprentissage and err_test > seuil_sousapprentissage:
+        print('WARNING: Sous-apprentissage détecté. Les erreurs d\'entraînement et de test sont toutes deux élevées.')
+    elif err_train < seuil_bon_ajustement and err_test < seuil_bon_ajustement:
+        print('Bon ajustement: Les erreurs d\'entraînement et de test sont à des niveaux acceptables.')
+    else:
+        print('Situation incertaine: Il se peut que des ajustements supplémentaires soient nécessaires.')
 
 def main():
 
@@ -58,19 +61,20 @@ def main():
     else:
         mp.validation_croisee(x_train, t_train)
 
-    # ~= À MODIFIER =~. 
-    # AJOUTER CODE AFIN DE CALCULER L'ERREUR D'APPRENTISSAGE
-    # ET DE VALIDATION EN % DU NOMBRE DE POINTS MAL CLASSES
+    # Calcul de l'erreur sur l'ensemble d'entraînement
     err_train = 0
-    err_test = 0
-    for i in range(len(x_train)):
+    N_train = x_train.shape[0]
+    for i in range(N_train):
         err_train += mp.erreur(t_train[i], mp.prediction(x_train[i]))
-    err_train /= len(x_train)
-    err_train *= 100
-    for i in range(len(x_test)):
+    err_train = (err_train / N_train) * 100  # Erreur moyenne en pourcentage
+
+    # Calcul de l'erreur sur l'ensemble de test
+    err_test = 0
+    N_test = x_test.shape[0]
+    for i in range(N_test):
         err_test += mp.erreur(t_test[i], mp.prediction(x_test[i]))
-    err_test /= len(x_test)
-    err_test *= 100
+    err_test = (err_test / N_test) * 100  # Erreur moyenne en pourcentage
+
 
     print('Erreur train = ', err_train, '%')
     print('Erreur test = ', err_test, '%')
